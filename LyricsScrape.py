@@ -69,5 +69,28 @@ for i in range(len(URLs)):
         continue
     finally:
         text_file.close()
- 
+
+#Finally, some files required additional clean up
+#We open each file and read it, then delete any line that contain "[sample text]"
+#Most often these are tags such as "[Intro]", "[Chorus]", etc.
+
+yearsSet = set(yearsAll)
+for year in yearsSet:
+    path = os.path.join("Lyrics", str(year))
+    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    for file in files:
+        pathFile = os.path.join(path, file)
+        print(pathFile)
+        with open(pathFile, "r", encoding="utf-8") as f:
+            try:
+                lines = f.readlines()
+            except:
+                continue
+        with open(pathFile, "w", encoding="utf-8") as f:
+            for line in lines:
+                if len(re.findall(r"\[.*\]", line)) == 0:
+                    f.write(line)
+                else:
+                    pass
+
  
