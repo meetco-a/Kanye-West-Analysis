@@ -1,0 +1,14 @@
+	Label	Regex
+0	my	\bmy\b
+1	mine	\bmine\b
+2	myself	\bmyself\b
+3	me	\bme\b
+4	i	\bi\b
+5	i'd	\bi'd\b
+6	i'll	\bi'll\b
+7	i'm	\bi'm\b
+8	ive	\bive\b
+9	i've	\bi've\b
+10	kanye	\bkanye\b
+11	yeez*	\byeez\w{0,}\b
+12	ye	\bye\b
