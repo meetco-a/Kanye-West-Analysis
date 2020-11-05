@@ -72,10 +72,11 @@ for i in range(len(URLs)):
 
 # Finally, some files required additional clean up
 yearsSet = set(yearsAll)
+
 for year in yearsSet:
     path = os.path.join("Lyrics", str(year))
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    # We open each file and read it, then delete any line that contain "[sample text]"
+    # We open each file and read it, then delete any line that contains "[sample text]"
     # Most often these are tags such as "[Intro]", "[Chorus]", etc.
     for file in files:
         pathFile = os.path.join(path, file)
@@ -91,5 +92,3 @@ for year in yearsSet:
                     f.write(line)
                 else:
                     pass
-
- 

@@ -1,130 +1,156 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 27 14:48:18 2016
+Created on Nov 05, 2020
 
 @author: Dimitar Atanasov
 """
 
 import numpy as np
 import pandas as pd
-import os, re
+import os
+import re
 import matplotlib.pyplot as plt
 
 #%%
 ####################################PART 0#####################################
 
-def addColumnData(df,aSeries,cName):
+
+def addColumnData(df, aSeries, cName):
     df1 = df.copy()    
     df1[cName] = aSeries
     return df1
 
-def getFileLength(filePath):
-    fileLength = 0
-    with open(filePath,'rb') as f:
+
+def get_file_length(file_path):
+    """Takes a file path as input and returns the length of the file in characters"""
+
+    file_length = 0
+    with open(file_path, 'rb') as f:
         for line in f:
-            lineb = line.decode(errors='replace')
-            linec = lineb.strip('\n')
-            fileLength += len(linec)
-    return fileLength
+            lineB = line.decode(errors='replace')
+            lineC = lineB.strip('\n')
+            file_length += len(lineC)
 
-def getCorpusFileLengths(corpusIndex):
-    (numentries,_) = corpusIndex.shape
-    lengths = np.zeros(numentries,dtype='int64')
-    fileSeries = pd.Series(corpusIndex['Full Relative Path'])
-    for entry in range(numentries):
-        lengths[entry] = getFileLength(fileSeries[entry])
-    return pd.Series(lengths,index=corpusIndex.index)
+    return file_length
 
-def makePatternList(aRegexSeries):
-    toReturn=[]
-    for item in aRegexSeries.index:
-        toAdd = re.compile(aRegexSeries[item])
-        toReturn.append(toAdd)
-    return toReturn
 
-def matchCountWithPatternListWith(aPatternList,filePath):
-    hitCounts = np.zeros(len(aPatternList),dtype='int64')
-    with open(filePath,'rb') as f:
+def get_corpus_file_lengths(corpus_index):
+    """Returns the lengths (in characters) of each file in a corpus index"""
+
+    (num_entries, _) = corpus_index.shape
+    lengths = np.zeros(num_entries, dtype='int64')
+    file_series = pd.Series(corpus_index['Full Relative Path'])
+    for entry in range(num_entries):
+        lengths[entry] = get_file_length(file_series[entry])
+
+    return pd.Series(lengths, index=corpus_index.index)
+
+
+def make_pattern_list(regex_series):
+    """Takes a list of string patterns and returns them in regex format"""
+
+    regex_list = []
+    for item in regex_series.index:
+        regex_item = re.compile(regex_series[item])
+        regex_list.append(regex_item)
+
+    return regex_list
+
+
+def count_patterns_in_file(pattern_list, file_path):
+    """Given a pattern list and a text file, counts occurrences of each pattern in the file"""
+
+    match_count = np.zeros(len(pattern_list), dtype='int64')
+    with open(file_path, 'rb') as f:
         for line in f:
-            lineb = line.decode(errors='replace')
-            for index in range(len(aPatternList)):
-                hitList = \
-                aPatternList[index].findall(lineb,re.I)
-                hitCounts[index] += len(hitList)
-    return hitCounts
+            lineB = line.decode(errors='replace')
+            for index in range(len(pattern_list)):
+                hit_list = pattern_list[index].findall(lineB, re.I)
+                match_count[index] += len(hit_list)
 
-def secMatchPatternsWithFiles(aPatternList,aFileSeries,corpusLocation):
-    toReturn = np.zeros((len(aFileSeries),len(aPatternList)),dtype='int64')
-    idxs = list(aFileSeries.index)
-    for fileidx in idxs:
-        filePath = aFileSeries[fileidx]
-        hits = matchCountWithPatternListWith(aPatternList,filePath)
-        toReturn[idxs.index(fileidx),:] = hits
-    return toReturn
+    return match_count
 
-def secMakeDataFrameOfPatternMatches(corpusIndexDF,countMatchArray,aLexiconDF):
-   p = list(aLexiconDF['Label'])
-   df = pd.DataFrame(countMatchArray,index = corpusIndexDF.index, columns = p)
-   return df
 
-def makeListOfConventionalWords(aText):
-    textlower = aText.lower()
-    convwordpat = re.compile(r'\b[a-zA-Z\'\-&*]{0,}\b')
-    return convwordpat.findall(textlower)
-   
-def makeConventionalBoW(aText):
-    thetext = makeListOfConventionalWords(aText)
-    returnDict = {}
-    for word in thetext:
-        returnDict[word] = returnDict.get(word,0) + 1
-    return returnDict 
+def match_patterns_with_files(pattern_list, file_series):
+    """Given a pattern list and a files list, counts occurrences of each pattern in each file"""
 
-#%%
-####################################PART 1#####################################
+    match_counts = np.zeros((len(file_series), len(pattern_list)), dtype='int64')
+    idxs = list(file_series.index)
+    for file_idx in idxs:
+        file_path = file_series[file_idx]
+        matches = count_patterns_in_file(pattern_list, file_path)
+        match_counts[idxs.index(file_idx), :] = matches
 
-#define Column Names
-dfColumns = ['Full Relative Path', 'Year', 'File Name','Song Name']
+    return match_counts
+
+
+def df_pattern_matches(corpus_index_df, count_match_array, lexicon_df):
+    """"""
+
+    p = list(lexicon_df['Label'])
+    df = pd.DataFrame(count_match_array, index=corpus_index_df.index, columns=p)
+    return df
+
+
+def list_conventional_words(text):
+    """Finds all conventional words in a string, i.e. not containing numbers or special characters"""
+
+    text_lower = text.lower()
+    conventional_words_pattern = re.compile(r'\b[a-zA-Z\'\-&*]{0,}\b')
+    return conventional_words_pattern.findall(text_lower)
+
+
+def make_conventional_bow(text):
+    """Finds all conventional words in a string, then creates a bag of words"""
+
+    text_words = list_conventional_words(aText)
+    bow = {}
+    for word in text_words:
+        bow[word] = bow.get(word, 0) + 1
+    return bow
+
+
+# Define column names
+dfColumns = ['Full Relative Path', 'Year', 'File Name', 'Song Name']
 dfNumCols = len(dfColumns)
 
+# Initialize empty list that we'll use later
 dfNumRows = 0
 fullPaths = []
 songYears = []
 fileNames = []
 songNames = []
-yearFoldersRaw = [year for year in os.listdir('Lyrics')]
-yearFolders = [fol for fol in yearFoldersRaw if fol!='desktop.ini']
+
+# Get a list of folders in the "Lyrics" directory
+yearFolders = [year for year in os.listdir('Lyrics')]
+
+# Loop through each folder and collect the following data
 for folder in yearFolders:
-    dfNumRows += len([f for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini'])
-    fullPaths += [(os.path.join('Lyrics',folder,f)) for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini']
-    songYears += [folder for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini']    
-    fileNames += [f for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini']
+    # Number of files in each folder
+    dfNumRows = len([f for f in os.listdir(os.path.join('Lyrics', folder))])
+    # Full paths of each file
+    fullPaths += [(os.path.join('Lyrics', folder, f)) for f in
+                  os.listdir(os.path.join('Lyrics', folder))]
+    # The year, file name and song name for each file
+    songYears += [folder]*dfNumRows
+    fileNames += [f for f in os.listdir(os.path.join('Lyrics', folder))]
     songNames = [song.replace('.txt', '') for song in fileNames]
-dfDic = {}
-#dictionary for index
-#dictionary for full relative path
-dfDic[dfColumns[0]]=fullPaths
-#dictionary for years
-dfDic[dfColumns[1]]=songYears
-#dictionary for File Name
-dfDic[dfColumns[2]]=fileNames
-#dictionary for Song Name
-dfDic[dfColumns[3]]=songNames
 
-dfCorpus = pd.DataFrame(dfDic)
-dfCorpus = dfCorpus[dfColumns]
+# Put the data from above into a dictionary
+dfDict = {dfColumns[0]: fullPaths, dfColumns[1]: songYears, dfColumns[2]: fileNames, dfColumns[3]: songNames}
 
+# Convert the dictionary to a DataFrame
+dfCorpus = pd.DataFrame(dfDict)
+
+# Get file lengths for each song/file and add it to corpus index
+fileLengths = get_corpus_file_lengths(dfCorpus)
+dfCorpus = addColumnData(dfCorpus, fileLengths, 'File Lengths')
+
+# Export the corpus index to a csv file
 if not os.path.exists('Outputs'):
     os.makedirs('Outputs')
-dfCorpus.to_csv(os.path.join('Outputs','Kanye Corpus Index.csv'),encoding='utf-8')
+dfCorpus.to_csv(os.path.join('Outputs', 'Kanye Corpus Index.csv'), encoding='utf-8')
 
-#Get file lengths for each song and add it to corpus index
-fileLengths = getCorpusFileLengths(dfCorpus)
-dfCorpus2 = addColumnData(dfCorpus,fileLengths,'File Lengths')
-dfCorpus2.to_csv(os.path.join('Outputs','Kanye Corpus Index.csv'),encoding='utf-8')
-
-
-#%%
-####################################PART 2#####################################
 
 #Get lexicons from txt file; count occurance of each word in all files; add new columns to corpus index
 dfLexicon1 = pd.read_table(os.path.join('Lexicons','iwords.txt'),index_col=0,sep='\t')
