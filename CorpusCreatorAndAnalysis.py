@@ -91,36 +91,37 @@ for i in range(len(fileSeries)):
 
 dfCorpus["Vocabulary Size"] = vocabSize
 
-#Get average I-words/Grandeur Words/Vocabulary size per year and plot
+# Get average I-words/Grandeur Words/Vocabulary size per year
 
-iwordscount = {}
-avgiwords = {}
+iWordsCount = {}
+avgIWords = {}
 
-grandwordscount = {}
-avggrandwords = {}
+grandWordsCount = {}
+avgGrandWords = {}
 
-vocabsizecount = {}
-avgvocabsize = {}
+vocabSizeCount = {}
+avgVocabSize = {}
 
-songcount = {}
+songCount = {}
 
-for i in range(len(dfCorpus5)):
-    iwordscount[str(dfCorpus5.ix[i,'Year'])] = iwordscount.get(dfCorpus5.ix[i,'Year'],0) + dfCorpus5.ix[i,'I-words']
-    grandwordscount[str(dfCorpus5.ix[i,'Year'])] = grandwordscount.get(dfCorpus5.ix[i,'Year'],0) + dfCorpus5.ix[i,'Grandeur words']
-    vocabsizecount[str(dfCorpus5.ix[i,'Year'])] = vocabsizecount.get(dfCorpus5.ix[i,'Year'],0) + dfCorpus5.ix[i,'Size of Vocabulary']
-    songcount[str(dfCorpus5.ix[i,'Year'])] = songcount.get(dfCorpus5.ix[i,'Year'],0) + 1
-for i in sorted(list(vocabsizecount.keys())):
-    avgiwords[str(i)] = iwordscount[str(i)]//songcount[str(i)]
-    avggrandwords[str(i)] = grandwordscount[str(i)]/songcount[str(i)]
-    avgvocabsize[str(i)] = vocabsizecount[str(i)]//songcount[str(i)]
+for i in range(len(dfCorpus)):
+    iWordsCount[str(dfCorpus.loc[i, 'Year'])] = iWordsCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'I-words']
+    grandWordsCount[str(dfCorpus.loc[i, 'Year'])] = grandWordsCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'Grandeur words']
+    vocabSizeCount[str(dfCorpus.loc[i, 'Year'])] = vocabSizeCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'Vocabulary Size']
+    songCount[str(dfCorpus.loc[i, 'Year'])] = songCount.get(dfCorpus.loc[i, 'Year'], 0) + 1
 
-plt.bar(avgiwords.keys(), avgiwords.values(),width=1)
+for i in sorted(list(vocabSizeCount.keys())):
+    avgIWords[str(i)] = iWordsCount[str(i)]//songCount[str(i)]
+    avgGrandWords[str(i)] = grandWordsCount[str(i)]/songCount[str(i)]
+    avgVocabSize[str(i)] = vocabSizeCount[str(i)]//songCount[str(i)]
+
+plt.bar(avgIWords.keys(), avgIWords.values(), width=1)
 plt.show()
 
-plt.bar(avggrandwords.keys(), avggrandwords.values(),width=1)
+plt.bar(avgGrandWords.keys(), avgGrandWords.values(), width=1)
 plt.show()
 
-plt.bar(avgvocabsize.keys(), avgvocabsize.values(),width=1)
+plt.bar(avgVocabSize.keys(), avgVocabSize.values(), width=0.5)
 plt.show()
 
 #Get Lexical Density, add new column and plot

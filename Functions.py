@@ -92,7 +92,7 @@ def list_conventional_words(text):
 
 
 def make_conventional_bow(text):
-    """Finds all conventional words in a string, then creates a bag of words"""
+    """Makes a bag of words of all conventional words in a file"""
 
     text_words = list_conventional_words(text)
     bow = {}
