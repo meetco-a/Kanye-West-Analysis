@@ -1,4 +1,4 @@
-# The Evolution of Kanye West
+# The Evolution of Kanye West [IN PROGRESS]
  
 This is a project I originally undertook as coursework in 2016 while at the University of Pennsylvania, and then adapted and improved in 2020 as a side project. 
 
