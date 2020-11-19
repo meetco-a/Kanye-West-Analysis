@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Nov 05, 2020
+Created on Apr 27, 2016
+Updated on Nov 05, 2020
 
 @author: Dimitar Atanasov
 """
@@ -8,6 +9,9 @@ Created on Nov 05, 2020
 import os
 import matplotlib.pyplot as plt
 from Functions import *
+import nltk
+nltk.download("stopwords")
+from nltk.corpus import stopwords
 
 
 # Define column names
@@ -72,8 +76,7 @@ totalGrandWords = countGrandDF.sum(axis=1)
 dfCorpus["I-words"] = totalIWords
 dfCorpus["Grandeur words"] = totalGrandWords
 
-
-# Next we get the vocabulary size, i.e. number of unique words per song
+# The next measure we will use is the vocabulary size, i.e. number of unique words per song
 vocabSize = pd.Series(np.zeros(len(fileSeries)))
 
 # Get the lyrics of each song
@@ -89,55 +92,20 @@ for i in range(len(fileSeries)):
     aBOW = make_conventional_bow(lyrics)
     vocabSize[i] = len(aBOW)
 
-dfCorpus["Vocabulary Size"] = vocabSize
+dfCorpus["Vocabulary size"] = vocabSize
 
-# Get average I-words/Grandeur Words/Vocabulary size per year
-
-iWordsCount = {}
-avgIWords = {}
-
-grandWordsCount = {}
-avgGrandWords = {}
-
-vocabSizeCount = {}
-avgVocabSize = {}
-
-songCount = {}
-
-for i in range(len(dfCorpus)):
-    iWordsCount[str(dfCorpus.loc[i, 'Year'])] = iWordsCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'I-words']
-    grandWordsCount[str(dfCorpus.loc[i, 'Year'])] = grandWordsCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'Grandeur words']
-    vocabSizeCount[str(dfCorpus.loc[i, 'Year'])] = vocabSizeCount.get(dfCorpus.loc[i, 'Year'], 0) + dfCorpus.loc[i, 'Vocabulary Size']
-    songCount[str(dfCorpus.loc[i, 'Year'])] = songCount.get(dfCorpus.loc[i, 'Year'], 0) + 1
-
-for i in sorted(list(vocabSizeCount.keys())):
-    avgIWords[str(i)] = iWordsCount[str(i)]//songCount[str(i)]
-    avgGrandWords[str(i)] = grandWordsCount[str(i)]/songCount[str(i)]
-    avgVocabSize[str(i)] = vocabSizeCount[str(i)]//songCount[str(i)]
-
-plt.bar(avgIWords.keys(), avgIWords.values(), width=1)
-plt.show()
-
-plt.bar(avgGrandWords.keys(), avgGrandWords.values(), width=1)
-plt.show()
-
-plt.bar(avgVocabSize.keys(), avgVocabSize.values(), width=0.5)
-plt.show()
-
-#Get Lexical Density, add new column and plot
-#Before running the code below, import nltk, then type nltk.download() and manually find and download the Stopwords corpus
-from nltk.corpus import stopwords
+# The final measure we will use is lexical density, i.e. the ratio of non-stopwords to total words in a song
 stops = stopwords.words('english')
 
-lexicalDensity = pd.Series(np.zeros(len(aFileSeries)))  
-for i in range(len(aFileSeries)):
+lexicalDensity = pd.Series(np.zeros(len(fileSeries)))
+for i in range(len(fileSeries)):
     aText = ''
-    with open(aFileSeries[i],'rb') as f:
+    with open(fileSeries[i], 'rb') as f:
         for line in f:
             lineb = line.decode(errors='replace')
             linec = lineb.strip('\n')
             aText += linec
-    aBOW = makeConventionalBoW(aText)
+    aBOW = make_conventional_bow(aText)
     totalWords = sum(aBOW.values())
     nonStopWords = 0
     dictKeys = list(aBOW.keys())
@@ -146,15 +114,22 @@ for i in range(len(aFileSeries)):
             nonStopWords += aBOW[entry]
     lexicalDensity[i] = (nonStopWords/totalWords)*100
 
-dfCorpus6 = addColumnData(dfCorpus5,lexicalDensity,'Lexical Density')
-dfLexDens = dfCorpus6.ix[:,['Year','Lexical Density']]
-lexdenscount = {}
-avglexdens = {}
+dfCorpus['Lexical density'] = lexicalDensity
 
-for i in range(len(dfLexDens)):
-    lexdenscount[str(dfLexDens.ix[i,'Year'])] = lexdenscount.get(dfLexDens.ix[i,'Year'],0) + dfLexDens.ix[i,'Lexical Density']
-for i in range(13):
-    avglexdens[str(i+2004)] = lexdenscount[str(i+2004)]/songcount[str(i+2004)]
-    
-plt.bar(avglexdens.keys(), avglexdens.values(),width=1)
+# Finally, we get average I-words/Grandeur words/Vocabulary size per year
+dfCorpusYear = dfCorpus[["Year", "I-words", "Grandeur words", "Vocabulary size", "Lexical density"]]\
+    .groupby(["Year"]).mean()
+dfCorpusYear = dfCorpusYear.reset_index()
+
+# Now we plot the data
+plt.bar(dfCorpusYear["Year"], dfCorpusYear["I-words"], width=0.5)
+plt.show()
+
+plt.bar(dfCorpusYear["Year"], dfCorpusYear["Grandeur words"], width=0.5)
+plt.show()
+
+plt.bar(dfCorpusYear["Year"], dfCorpusYear["Vocabulary size"], width=0.5)
+plt.show()
+
+plt.bar(dfCorpusYear["Year"], dfCorpusYear["Vocabulary size"], width=0.5)
 plt.show()

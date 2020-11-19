@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 27 14:48:18 2016
+Created on Apr 27, 2016
+Updated on ...
 
 @author: Dimitar Atanasov
 """
@@ -8,8 +9,10 @@ Created on Wed Apr 27 14:48:18 2016
 
 import numpy as np
 import pandas as pd
-import os, re
+import os
+import re
 import matplotlib.pyplot as plt
+from Functions import *
 
 dfColumns = ['Full Relative Path', 'Year', 'File Name','Song Name']
 dfNumCols = len(dfColumns)
@@ -27,6 +30,7 @@ for folder in yearFolders:
     songYears += [folder for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini']    
     fileNames += [f for f in os.listdir(os.path.join('Lyrics',folder)) if f!='desktop.ini']
     songNames = [song.replace('.txt', '') for song in fileNames]
+
 dfDic = {}
 #dictionary for index
 #dictionary for full relative path
@@ -45,75 +49,6 @@ if not os.path.exists('Outputs'):
     os.makedirs('Outputs')
 dfCorpus.to_csv(os.path.join('Outputs','Kanye Corpus Index.csv'),encoding='utf-8')
 
-#%%
-
-def addColumnData(df,aSeries,cName):
-    df1 = df.copy()    
-    df1[cName] = aSeries
-    return df1
-
-def getFileLength(filePath):
-    fileLength = 0
-    with open(filePath,'rb') as f:
-        for line in f:
-            lineb = line.decode(errors='replace')
-            linec = lineb.strip('\n')
-            fileLength += len(linec)
-    return fileLength
-
-def getCorpusFileLengths(corpusIndex):
-    (numentries,_) = corpusIndex.shape
-    lengths = np.zeros(numentries,dtype='int64')
-    fileSeries = pd.Series(corpusIndex['Full Relative Path'])
-    for entry in range(numentries):
-        lengths[entry] = getFileLength(fileSeries[entry])
-    return pd.Series(lengths,index=corpusIndex.index)
-
-def makePatternList(aRegexSeries):
-    toReturn=[]
-    for item in aRegexSeries.index:
-        toAdd = re.compile(aRegexSeries[item])
-        toReturn.append(toAdd)
-    return toReturn
-
-def matchCountWithPatternListWith(aPatternList,filePath):
-    hitCounts = np.zeros(len(aPatternList),dtype='int64')
-    with open(filePath,'rb') as f:
-        for line in f:
-            lineb = line.decode(errors='replace')
-            for index in range(len(aPatternList)):
-                hitList = \
-                aPatternList[index].findall(lineb,re.I)
-                hitCounts[index] += len(hitList)
-    return hitCounts
-
-def secMatchPatternsWithFiles(aPatternList,aFileSeries,corpusLocation):
-    toReturn = np.zeros((len(aFileSeries),len(aPatternList)),dtype='int64')
-    idxs = list(aFileSeries.index)
-    for fileidx in idxs:
-        filePath = aFileSeries[fileidx]
-        hits = matchCountWithPatternListWith(aPatternList,filePath)
-        toReturn[idxs.index(fileidx),:] = hits
-    return toReturn
-
-def secMakeDataFrameOfPatternMatches(corpusIndexDF,countMatchArray,aLexiconDF):
-   p = list(aLexiconDF['Label'])
-   df = pd.DataFrame(countMatchArray,index = corpusIndexDF.index, columns = p)
-   return df
-
-def makeListOfConventionalWords(aText):
-    textlower = aText.lower()
-    convwordpat = re.compile(r'\b\w{1,}\b')
-    return convwordpat.findall(textlower)
-   
-def makeConventionalBoW(aText):
-    thetext = makeListOfConventionalWords(aText)
-    returnDict = {}
-    for word in thetext:
-        returnDict[word] = returnDict.get(word,0) + 1
-    return returnDict
-
-#%%
 
 #Get file lengths for each song and add it to corpus index
 fileLengths = getCorpusFileLengths(dfCorpus)
