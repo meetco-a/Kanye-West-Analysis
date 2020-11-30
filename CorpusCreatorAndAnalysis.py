@@ -18,7 +18,7 @@ from nltk.corpus import stopwords
 dfColumns = ['Full Relative Path', 'Year', 'File Name', 'Song Name']
 dfNumCols = len(dfColumns)
 
-# Initialize empty list that we'll use later
+# Initialize empty lists that we'll use later
 dfNumRows = 0
 fullPaths = []
 songYears = []
@@ -48,11 +48,12 @@ dfCorpus = pd.DataFrame(dfDict)
 fileLengths = get_corpus_file_lengths(dfCorpus)
 dfCorpus['File Lengths'] = fileLengths
 
+"""
 # Export the corpus index to a csv file
 if not os.path.exists('Outputs'):
     os.makedirs('Outputs')
 dfCorpus.to_csv(os.path.join('Outputs', 'Kanye Corpus Index.csv'), encoding='utf-8')
-
+"""
 
 # I've defined two lexicons: I-words (words referring to oneself); and grandeur words
 # Here I load each lexicon and then count the occurrence of its words in each song
@@ -119,17 +120,59 @@ dfCorpus['Lexical density'] = lexicalDensity
 # Finally, we get average I-words/Grandeur words/Vocabulary size per year
 dfCorpusYear = dfCorpus[["Year", "I-words", "Grandeur words", "Vocabulary size", "Lexical density"]]\
     .groupby(["Year"]).mean()
-dfCorpusYear = dfCorpusYear.reset_index()
+dfCorpusYear.reset_index(inplace=True)
+
+# Since there are a few years with no data (i.e. no songs released), we need to impute the missing data
+# First I add each missing year to the DF with NaN values
+for year in range(2004, 2021):
+    if str(year) not in dfCorpusYear['Year'].values:
+        dfTemp = pd.DataFrame([[str(year), np.NaN, np.NaN, np.NaN, np.NaN]], columns=list(dfCorpusYear.columns))
+        dfCorpusYear = dfCorpusYear.append(dfTemp, ignore_index=True)
+
+# Then we sort and re-index the data, and finally fill in the missing values using linear interpolation
+dfCorpusYear.sort_values(by=['Year'], inplace=True)
+dfCorpusYear.reset_index(drop=True, inplace=True)
+dfCorpusYear.interpolate(method='linear', inplace=True)
 
 # Now we plot the data
-plt.bar(dfCorpusYear["Year"], dfCorpusYear["I-words"], width=0.5)
+# First we plot I-words and Grandeur words
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('Year')
+ax1.set_ylabel('I-words', color=color)
+ax1.plot(dfCorpusYear["Year"], dfCorpusYear["I-words"], color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+# Instantiate a second axes that shares the same x-axis
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.set_ylabel('Grandeur words', color=color)
+ax2.plot(dfCorpusYear["Year"], dfCorpusYear["Grandeur words"], color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
 plt.show()
 
-plt.bar(dfCorpusYear["Year"], dfCorpusYear["Grandeur words"], width=0.5)
+# Then plot vocab. size and lexical density
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('Year')
+ax1.set_ylabel('Vocabulary size', color=color)
+ax1.plot(dfCorpusYear["Year"], dfCorpusYear["Vocabulary size"], color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+# Instantiate a second axes that shares the same x-axis
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.set_ylabel('Lexical density', color=color)
+ax2.plot(dfCorpusYear["Year"], dfCorpusYear["Lexical density"], color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
+plt.yscale("log")
 plt.show()
 
-plt.bar(dfCorpusYear["Year"], dfCorpusYear["Vocabulary size"], width=0.5)
-plt.show()
-
-plt.bar(dfCorpusYear["Year"], dfCorpusYear["Vocabulary size"], width=0.5)
-plt.show()
+# Let's also check the correlations between the 4 measures
+print(dfCorpusYear.corr())
