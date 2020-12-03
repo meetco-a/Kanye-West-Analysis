@@ -11,11 +11,16 @@ Updated on Nov 05, 2020
 import numpy as np
 import pandas as pd
 import re
+from nltk.stem.snowball import SnowballStemmer
 
 
 def get_file_length(file_path):
-    """Takes a file path as input and returns the length of the file in characters"""
+    """
+    Takes a file path as input and returns the length of the file in characters.
 
+    :param file_path: str
+    :return: file_length: int
+    """
     file_length = 0
     with open(file_path, 'rb') as f:
         for line in f:
@@ -27,8 +32,12 @@ def get_file_length(file_path):
 
 
 def get_corpus_file_lengths(corpus_index):
-    """Returns the lengths (in characters) of each file in a corpus index"""
+    """
+    Returns the lengths (in characters) of each file in a corpus index.
 
+    :param corpus_index: pd.DataFrame
+    :return: pd.Series
+    """
     (num_entries, _) = corpus_index.shape
     lengths = np.zeros(num_entries, dtype='int64')
     file_series = pd.Series(corpus_index['Full Relative Path'])
@@ -39,8 +48,12 @@ def get_corpus_file_lengths(corpus_index):
 
 
 def make_pattern_list(regex_series):
-    """Takes a list of string patterns and returns them in regex format"""
+    """
+    Takes a list of string patterns and returns them in regex format.
 
+    :param regex_series: pd.Series
+    :return: regex_list: list
+    """
     regex_list = []
     for item in regex_series.index:
         regex_item = re.compile(regex_series[item])
@@ -50,8 +63,13 @@ def make_pattern_list(regex_series):
 
 
 def count_patterns_in_file(pattern_list, file_path):
-    """Given a pattern list and a text file, counts occurrences of each pattern in the file"""
+    """
+    Given a pattern list and a text file, counts occurrences of each pattern in the file.
 
+    :param pattern_list: list
+    :param file_path: str
+    :return: match_count: pd.Series
+    """
     match_count = np.zeros(len(pattern_list), dtype='int64')
     with open(file_path, 'rb') as f:
         for line in f:
@@ -64,8 +82,13 @@ def count_patterns_in_file(pattern_list, file_path):
 
 
 def match_patterns_with_files(pattern_list, file_series):
-    """Given a pattern list and a files list, counts occurrences of each pattern in each file"""
+    """
+    Given a pattern list and a files list, counts occurrences of each pattern in each file.
 
+    :param pattern_list: list
+    :param file_series: pd.Series
+    :return: match_counts: pd.Series
+    """
     match_counts = np.zeros((len(file_series), len(pattern_list)), dtype='int64')
     idxs = list(file_series.index)
     for file_idx in idxs:
@@ -85,18 +108,27 @@ def df_pattern_matches(corpus_index_df, count_match_array, lexicon_df):
 
 
 def list_conventional_words(text):
-    """Finds all conventional words in a string, i.e. not containing numbers or special characters"""
+    """
+    Finds all conventional words in a string, i.e. not containing numbers or special characters.
 
-    text_lower = text.lower()
+    :param text: str
+    :return: list
+    """
     conventional_words_pattern = re.compile(r'\b[a-zA-Z\'\-&*]{0,}\b')
-    return conventional_words_pattern.findall(text_lower)
+    return conventional_words_pattern.findall(text.lower())
 
 
 def make_conventional_bow(text):
-    """Makes a bag of words of all conventional words in a file"""
+    """
+    Makes a bag of words of all stemmed conventional words in a file.
 
+    :param text: str
+    :return: bow: dict
+    """
     text_words = list_conventional_words(text)
     bow = {}
+    stemmer = SnowballStemmer("english", ignore_stopwords=True)
     for word in text_words:
-        bow[word] = bow.get(word, 0) + 1
+        word_stem = stemmer.stem(word)
+        bow[word_stem] = bow.get(word_stem, 0) + 1
     return bow

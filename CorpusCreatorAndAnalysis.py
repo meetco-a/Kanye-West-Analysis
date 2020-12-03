@@ -78,26 +78,32 @@ dfCorpus["I-words"] = totalIWords
 dfCorpus["Grandeur words"] = totalGrandWords
 
 # The next measure we will use is the vocabulary size, i.e. number of unique words per song
-vocabSize = pd.Series(np.zeros(len(fileSeries)))
+# We'll count unique words per year to avoid duplicate counting of words
+stops = stopwords.words('english')
+vocabSize = pd.Series(np.zeros(len(dfCorpus["Year"].unique())))
 
-# Get the lyrics of each song
-for i in range(len(fileSeries)):
-    lyrics = ''
-    with open(fileSeries[i], 'rb') as f:
-        for line in f:
-            lineB = line.decode(errors='replace')
-            lineC = lineB.strip('\n')
-            lyrics += ' ' + lineC
+for i, year in enumerate(dfCorpus["Year"].unique()):
+    dfYear = dfCorpus[dfCorpus["Year"] == year]
 
-    # Make a bag of words from the lyrics and count number of unique words
-    aBOW = make_conventional_bow(lyrics)
+    # Put all the lyrics for that year in one string, then use it to make a BoW
+    lyricsYear = ''
+    for file in dfYear["Full Relative Path"]:
+        with open(file, 'rb') as f:
+            for line in f:
+                lineB = line.decode(errors='replace')
+                lineC = lineB.strip('\n')
+                lyricsYear += ' ' + lineC
+
+    # Make a bag of words from the lyrics and count number of unique words, removing stopwords
+    aBOW = make_conventional_bow(lyricsYear)
+    for k, v in list(aBOW.items()):
+        if k in stops or k == "":
+            del aBOW[k]
     vocabSize[i] = len(aBOW)
+    # We'll attach this to the corpus later when we group by year
 
-dfCorpus["Vocabulary size"] = vocabSize
 
 # The final measure we will use is lexical density, i.e. the ratio of non-stopwords to total words in a song
-stops = stopwords.words('english')
-
 lexicalDensity = pd.Series(np.zeros(len(fileSeries)))
 for i in range(len(fileSeries)):
     aText = ''
@@ -118,9 +124,11 @@ for i in range(len(fileSeries)):
 dfCorpus['Lexical density'] = lexicalDensity
 
 # Finally, we get average I-words/Grandeur words/Vocabulary size per year
-dfCorpusYear = dfCorpus[["Year", "I-words", "Grandeur words", "Vocabulary size", "Lexical density"]]\
+dfCorpusYear = dfCorpus[["Year", "I-words", "Grandeur words", "Lexical density"]]\
     .groupby(["Year"]).mean()
 dfCorpusYear.reset_index(inplace=True)
+# Since vocabulary size is grouped by year, we attach it to the DF here
+dfCorpusYear["Vocabulary size"] = vocabSize
 
 # Since there are a few years with no data (i.e. no songs released), we need to impute the missing data
 # First I add each missing year to the DF with NaN values
@@ -140,19 +148,23 @@ fig, ax1 = plt.subplots()
 
 color = 'tab:red'
 ax1.set_xlabel('Year')
-ax1.set_ylabel('I-words', color=color)
+ax1.set_ylabel('Average I-words', color=color)
 ax1.plot(dfCorpusYear["Year"], dfCorpusYear["I-words"], color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
-ax2.set_ylabel('Grandeur words', color=color)
+ax2.set_ylabel('Average Grandeur words', color=color)
 ax2.plot(dfCorpusYear["Year"], dfCorpusYear["Grandeur words"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
+fig.set_size_inches(12, 8)
 plt.show()
+
+# Let's also check the correlation between the two
+print(dfCorpusYear[["I-words", "Grandeur words"]].corr())
 
 # Then plot vocab. size and lexical density
 fig, ax1 = plt.subplots()
@@ -166,13 +178,13 @@ ax1.tick_params(axis='y', labelcolor=color)
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
-ax2.set_ylabel('Lexical density', color=color)
+ax2.set_ylabel('Average Lexical density', color=color)
 ax2.plot(dfCorpusYear["Year"], dfCorpusYear["Lexical density"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
-plt.yscale("log")
+fig.set_size_inches(12, 8)
 plt.show()
 
-# Let's also check the correlations between the 4 measures
-print(dfCorpusYear.corr())
+# Let's also check the correlation between the two
+print(dfCorpusYear[["Vocabulary size", "Lexical density"]].corr())

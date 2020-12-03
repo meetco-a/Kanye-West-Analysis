@@ -27,7 +27,7 @@ for i in range(1, 8):
     soup = BeautifulSoup(rtxt, "html.parser")
 
     # Get all the release years for each song
-    yearsRaw = soup.find_all('td', {'content': re.compile(r'\d{0,}')})
+    yearsRaw = soup.find_all('td', {'content': re.compile(r'\d*')})
     years = [x.get('content') for x in yearsRaw]
     yearsAll += years
 
@@ -56,7 +56,7 @@ for i in range(len(URLs)):
             songName = songNameTemp
 
     # Extract all verses for each song
-    lyricDataTemp = x.find_all('p', {'class':'verse'})
+    lyricDataTemp = x.find_all('p', {'class': 'verse'})
     lyricList = [lyricDataTemp[i].get_text() for i in range(len(lyricDataTemp))]
     lyricData = '\n'.join(lyricList)
 
