@@ -61,8 +61,8 @@ lexiconI = pd.read_table(os.path.join('Lexicons', 'iwords.txt'), index_col=0, se
 lexiconGrand = pd.read_table(os.path.join('Lexicons', 'grandeurwords.txt'), index_col=0, sep='\t')
 
 # Extract the list of regex patterns in each lexicon
-patternListI = make_pattern_list(lexiconI['Regex'])
-patternListGrand = make_pattern_list(lexiconGrand['Regex'])
+patternListI = list_patterns(lexiconI['Regex'])
+patternListGrand = list_patterns(lexiconGrand['Regex'])
 
 # Count the number of pattern matches in each file for both lexicons and put them in a DataFrame
 fileSeries = dfCorpus['Full Relative Path']
@@ -188,3 +188,56 @@ plt.show()
 
 # Let's also check the correlation between the two
 print(dfCorpusYear[["Vocabulary size", "Lexical density"]].corr())
+
+####################################################################
+
+# Same analysis but using a 3-year rolling average for each variable
+
+dfCorpusTest = dfCorpusYear.rolling(3).mean()
+
+# Now we plot the data
+# First we plot I-words and Grandeur words
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('Year')
+ax1.set_ylabel('Average I-words', color=color)
+ax1.plot(dfCorpusTest["Year"], dfCorpusTest["I-words"], color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+# Instantiate a second axes that shares the same x-axis
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.set_ylabel('Average Grandeur words', color=color)
+ax2.plot(dfCorpusTest["Year"], dfCorpusTest["Grandeur words"], color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
+fig.set_size_inches(12, 8)
+plt.show()
+
+# Let's also check the correlation between the two
+print(dfCorpusTest[["I-words", "Grandeur words"]].corr())
+
+# Then plot vocab. size and lexical density
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('Year')
+ax1.set_ylabel('Vocabulary size', color=color)
+ax1.plot(dfCorpusTest["Year"], dfCorpusTest["Vocabulary size"], color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+# Instantiate a second axes that shares the same x-axis
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.set_ylabel('Average Lexical density', color=color)
+ax2.plot(dfCorpusTest["Year"], dfCorpusTest["Lexical density"], color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
+fig.set_size_inches(12, 8)
+plt.show()
+
+# Let's also check the correlation between the two
+print(dfCorpusTest[["Vocabulary size", "Lexical density"]].corr())

@@ -47,7 +47,7 @@ def get_corpus_file_lengths(corpus_index):
     return pd.Series(lengths, index=corpus_index.index)
 
 
-def make_pattern_list(regex_series):
+def list_patterns(regex_series):
     """
     Takes a list of string patterns and returns them in regex format.
 
@@ -95,6 +95,40 @@ def match_patterns_with_files(pattern_list, file_series):
         file_path = file_series[file_idx]
         matches = count_patterns_in_file(pattern_list, file_path)
         match_counts[idxs.index(file_idx), :] = matches
+
+    return match_counts
+
+
+def count_patterns_string(pattern_list, string):
+    """
+    Given a list of regex patterns and a string, counts the occurrence of each pattern in the string.
+
+    :param pattern_list:
+    :param string:
+    :return:
+    """
+    match_count = np.zeros(len(pattern_list), dtype='int64')
+    for i in range(len(pattern_list)):
+        hit_list = pattern_list[i].findall(string, re.I)
+        match_count[i] += len(hit_list)
+
+    return match_count
+
+
+def count_patterns_series(pattern_list, series):
+    """
+    Given a list of regex patterns and a series of strings, counts occurrences of each pattern in each string.
+
+    :param pattern_list: list
+    :param series: pd.Series
+    :return: match_counts: pd.Series
+    """
+    match_counts = np.zeros((len(series), len(pattern_list)), dtype='int64')
+    idxs = list(series.index)
+    for idx in idxs:
+        string = series[idx]
+        matches = count_patterns_string(pattern_list, string)
+        match_counts[idxs.index(idx), :] = matches
 
     return match_counts
 
