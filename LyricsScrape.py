@@ -14,12 +14,12 @@ artist = genius.search_artist('Kanye West', sort="title")
 
 # I then put them in a DataFrame
 dfColumns = ['Song Title', 'Date', 'Lyrics']
-dfCorpus = pd.DataFrame(columns=dfColumns)
+dfLyrics = pd.DataFrame(columns=dfColumns)
 for song in artist.songs:
     dfTemp = pd.DataFrame([[song.title, song.year, song.lyrics]], columns=dfColumns)
-    dfCorpus = dfCorpus.append(dfTemp, ignore_index=True)
+    dfCorpus = dfLyrics.append(dfTemp, ignore_index=True)
 
 # Pickle the scraped lyrics into a file
 outfile = open("lyrics.txt", "wb")
-pickle.dump(dfCorpus, outfile)
+pickle.dump(dfLyrics, outfile)
 outfile.close()
