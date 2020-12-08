@@ -1,5 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created in December 2020
 
-import re
+@author: Dimitar Atanasov
+"""
+
 import os
 import pandas as pd
 import numpy as np
@@ -7,9 +12,7 @@ import matplotlib.pyplot as plt
 from Functions import *
 import pickle
 from textblob import TextBlob
-import nltk
 from nltk.corpus import stopwords
-
 
 # Load the scraped lyrics from the pickled file
 infile = open("lyrics.txt", "rb")
@@ -32,8 +35,8 @@ dfLyrics["Lyrics"] = dfLyrics["Lyrics"].str.replace("\n", " ")
 
 # I've defined two lexicons: I-words (words referring to oneself); and grandeur words
 # Here I load each lexicon and then count the occurrence of its words in each song
-lexiconI = pd.read_table(os.path.join('Lexicons', 'iwords.txt'), index_col=0, sep='\t')
-lexiconGrand = pd.read_table(os.path.join('Lexicons', 'grandeurwords.txt'), index_col=0, sep='\t')
+lexiconI = pd.read_table(os.path.join('Lexicons', 'i_words.txt'), index_col=0, sep='\t')
+lexiconGrand = pd.read_table(os.path.join('Lexicons', 'grandeur_words.txt'), index_col=0, sep='\t')
 
 # Extract the list of regex patterns in each lexicon
 patternListI = list_patterns(lexiconI['Regex'])
@@ -94,8 +97,8 @@ dfLyrics['Lexical density'] = lexicalDensity
 
 
 # Using TextBlob, I measure each lyrics' sentiment
-def get_lyrics_sentiment(lyrics):
-    analysis = TextBlob(lyrics)
+def get_lyrics_sentiment(song_lyrics):
+    analysis = TextBlob(song_lyrics)
     return analysis.sentiment.polarity
 
 

@@ -1,8 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+Created in December 2020
+
+@author: Dimitar Atanasov
+"""
 
 import pandas as pd
 import pickle
 import lyricsgenius
-
 
 # Using the Genius API, I download all of Kanye West's songs, excluding remixes, live versions, and interviews
 # Additional clean up will be done later upon inspection of the scraped data
