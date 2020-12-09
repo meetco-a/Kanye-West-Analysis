@@ -11,8 +11,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Functions import *
 import pickle
-from textblob import TextBlob
 from nltk.corpus import stopwords
+from wordcloud import WordCloud, STOPWORDS
+from PIL import Image
+
+
+###################################
+# 1. DATA CLEANING #
+###################################
 
 # Load the scraped lyrics from the pickled file
 infile = open("lyrics.txt", "rb")
@@ -29,18 +35,28 @@ searchFor = ["Freestyle", "Speech", "Reference", "Version", "Alternate", "Jools"
 dfLyrics = dfLyrics[~dfLyrics["Song Title"].str.contains('|'.join(searchFor))]
 dfLyrics.reset_index(inplace=True, drop=True)
 
-# Add a new Year column and replace newlines with blank space in Lyrics
+# Add a new Year column and replace newlines with blank space in Lyrics; also drop tags, e.g. [Outro]
 dfLyrics["Year"] = pd.DatetimeIndex(dfLyrics["Date"]).year
 dfLyrics["Lyrics"] = dfLyrics["Lyrics"].str.replace("\n", " ")
+dfLyrics["Lyrics"] = dfLyrics['Lyrics'].str.replace(r"\[[^\]]*\]", "")
+
+# Drop songs where lyrics are not released or from leaked demo, as well as very short lyrics
+dfLyrics = dfLyrics[~dfLyrics['Lyrics'].str.contains("Lyrics for this|Lyrics from")]
+dfLyrics = dfLyrics[~dfLyrics['Lyrics'].apply(lambda x: len(x) < 10)]
+
+
+###################################
+# 2. CALCULATING FEATURES #
+###################################
 
 # I've defined two lexicons: I-words (words referring to oneself); and grandeur words
 # Here I load each lexicon and then count the occurrence of its words in each song
 lexiconI = pd.read_table(os.path.join('Lexicons', 'i_words.txt'), index_col=0, sep='\t')
 lexiconGrand = pd.read_table(os.path.join('Lexicons', 'grandeur_words.txt'), index_col=0, sep='\t')
 
-# Extract the list of regex patterns in each lexicon
-patternListI = list_patterns(lexiconI['Regex'])
-patternListGrand = list_patterns(lexiconGrand['Regex'])
+# Extract the list of regex patterns in each lexicon and compile them
+patternListI = [re.compile(pattern, re.IGNORECASE) for pattern in lexiconI['Regex']]
+patternListGrand = [re.compile(pattern, re.IGNORECASE) for pattern in lexiconGrand['Regex']]
 
 # Count the number of pattern matches in each file for both lexicons and put them in a DataFrame
 lyricsSeries = dfLyrics["Lyrics"]
@@ -58,7 +74,9 @@ dfLyrics["Grandeur words"] = totalGrandWords
 # The next measure we will use is the vocabulary size, i.e. number of unique words per song
 # We'll count unique words per year to avoid duplicate counting of words
 stops = stopwords.words('english')
-vocabSize = pd.Series(np.zeros(len(dfLyrics["Year"].unique())))
+totalWordsYear = pd.Series(np.zeros(len(dfLyrics["Year"].unique())))
+uniqueWords = pd.Series(np.zeros(len(dfLyrics["Year"].unique())))
+lexicalDiversity = pd.Series(np.zeros(len(dfLyrics["Year"].unique())))
 
 for i, year in enumerate(dfLyrics["Year"].unique()):
     dfYear = dfLyrics[dfLyrics["Year"] == year]
@@ -70,14 +88,16 @@ for i, year in enumerate(dfLyrics["Year"].unique()):
 
     # Make a bag of words from the lyrics and count number of unique words, removing stopwords
     aBOW = make_conventional_bow(lyricsYear)
+    totalWordsYear[i] = sum(aBOW.values())
     for k, v in list(aBOW.items()):
         if k in stops or k == "":
             del aBOW[k]
-    vocabSize[i] = len(aBOW)
+    uniqueWords[i] = len(aBOW)
+    lexicalDiversity[i] = uniqueWords[i]/totalWordsYear[i]
     # We'll attach this to the corpus later when we group by year
 
 
-# The final measure we will use is lexical density, i.e. the ratio of non-stopwords to total words in a song
+# Another measure we will use is lexical density, i.e. the ratio of non-stopwords to total words in a song
 lexicalDensity = pd.Series(np.zeros(len(lyricsSeries)))
 for i, lyrics in enumerate(lyricsSeries):
     aBOW = make_conventional_bow(lyrics)
@@ -97,11 +117,6 @@ dfLyrics['Lexical density'] = lexicalDensity
 
 
 # Using TextBlob, I measure each lyrics' sentiment
-def get_lyrics_sentiment(song_lyrics):
-    analysis = TextBlob(song_lyrics)
-    return analysis.sentiment.polarity
-
-
 sentiment = dfLyrics.apply(lambda row: get_lyrics_sentiment(row["Lyrics"]), axis=1)
 dfLyrics["Sentiment"] = sentiment
 
@@ -111,7 +126,9 @@ dfLyricsYear = dfLyrics[["Year", "I-words", "Grandeur words", "Lexical density",
 dfLyricsYear.reset_index(inplace=True)
 
 # Since vocabulary size is grouped by year, we attach it to the DF here
-dfLyricsYear["Vocabulary size"] = vocabSize
+dfLyricsYear["Vocabulary size"] = uniqueWords
+dfLyricsYear["Lexical diversity"] = lexicalDiversity
+dfLyricsYear["Total words"] = totalWordsYear
 
 # Add number of songs per year as well and reset index
 dfNoSongs = dfLyrics[["Year", "Date"]].groupby(["Year"]).count().reset_index()
@@ -121,7 +138,8 @@ dfLyricsYear["Number of Songs"] = dfNoSongs["Date"]
 # First I add each missing year to the DF with NaN values
 for year in range(2003, 2021):
     if year not in dfLyricsYear['Year'].values:
-        dfTemp = pd.DataFrame([[year, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, 0]], columns=list(dfLyricsYear.columns))
+        dfTemp = pd.DataFrame([[year, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, 0]],
+                              columns=list(dfLyricsYear.columns))
         dfLyricsYear = dfLyricsYear.append(dfTemp, ignore_index=True)
 
 # Then we sort and re-index the data, and finally fill in the missing values using linear interpolation
@@ -129,7 +147,11 @@ dfLyricsYear.sort_values(by=['Year'], inplace=True)
 dfLyricsYear.reset_index(drop=True, inplace=True)
 dfLyricsYear.interpolate(method='linear', inplace=True)
 
-# Now we plot the data
+
+###################################
+# 3. PLOTTING #
+###################################
+
 # First we plot I-words and Grandeur words
 fig, ax1 = plt.subplots()
 
@@ -159,14 +181,14 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('Year')
 ax1.set_ylabel('Vocabulary size', color=color)
-ax1.plot(dfLyricsYear["Year"], dfLyricsYear["Vocabulary size"], color=color)
+ax1.plot(dfLyricsYear["Year"], dfLyricsYear["Total words"], color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
 ax2.set_ylabel('Average Lexical density', color=color)
-ax2.plot(dfLyricsYear["Year"], dfLyricsYear["Lexical density"], color=color)
+ax2.plot(dfLyricsYear["Year"], dfLyricsYear["Lexical diversity"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
@@ -174,13 +196,14 @@ fig.set_size_inches(12, 8)
 plt.show()
 
 # Let's also check the correlation between the two
-print(dfLyricsYear[["Vocabulary size", "Lexical density"]].corr())
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    print(dfLyricsYear[["Total words", "Vocabulary size", "Lexical diversity", "Lexical density"]].corr())
 
 ####################################################################
 
 # Same analysis but using a 3-year rolling average for each variable
 
-dfLyricsTest = dfLyricsYear.rolling(3).mean()
+dfLyricsRolling = dfLyricsYear.rolling(3).mean()
 
 # Now we plot the data
 # First we plot I-words and Grandeur words
@@ -189,14 +212,14 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('Year')
 ax1.set_ylabel('Average I-words', color=color)
-ax1.plot(dfLyricsTest["Year"], dfLyricsTest["I-words"], color=color)
+ax1.plot(dfLyricsRolling["Year"], dfLyricsRolling["I-words"], color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
 ax2.set_ylabel('Average Grandeur words', color=color)
-ax2.plot(dfLyricsTest["Year"], dfLyricsTest["Grandeur words"], color=color)
+ax2.plot(dfLyricsRolling["Year"], dfLyricsRolling["Grandeur words"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
@@ -204,7 +227,7 @@ fig.set_size_inches(12, 8)
 plt.show()
 
 # Let's also check the correlation between the two
-print(dfLyricsTest[["I-words", "Grandeur words"]].corr())
+print(dfLyricsRolling[["I-words", "Grandeur words"]].corr())
 
 # Then plot vocab. size and lexical density
 fig, ax1 = plt.subplots()
@@ -212,14 +235,14 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('Year')
 ax1.set_ylabel('Vocabulary size', color=color)
-ax1.plot(dfLyricsTest["Year"], dfLyricsTest["Vocabulary size"], color=color)
+ax1.plot(dfLyricsRolling["Year"], dfLyricsRolling["Total words"], color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
 ax2.set_ylabel('Average Lexical density', color=color)
-ax2.plot(dfLyricsTest["Year"], dfLyricsTest["Lexical density"], color=color)
+ax2.plot(dfLyricsRolling["Year"], dfLyricsRolling["Lexical diversity"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
@@ -227,4 +250,23 @@ fig.set_size_inches(12, 8)
 plt.show()
 
 # Let's also check the correlation between the two
-print(dfLyricsTest[["Vocabulary size", "Lexical density"]].corr())
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    print(dfLyricsRolling[["Total words", "Vocabulary size", "Lexical diversity", "Lexical density"]].corr())
+
+plt.plot(dfLyricsRolling["Year"], dfLyricsRolling["Sentiment"])
+
+
+# Let's also create a word cloud of all of Kanye's lyrics
+# Put all lyrics in a string
+allLyrics = ""
+for lyric in dfLyrics['Lyrics']:
+    allLyrics += lyric + " "
+
+# Create a mask to display the cloud in the shape of a person
+mask = np.array(Image.open('user.png'))
+
+# Create a word cloud and display it
+wordCloud = WordCloud(width=3000, height=2000, random_state=3, background_color='white', colormap='Set2',
+                      collocations=False, stopwords=STOPWORDS, mask=mask).generate(allLyrics)
+
+plot_cloud(wordCloud)
