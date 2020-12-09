@@ -1,6 +1,6 @@
-# The Evolution of Kanye West [IN PROGRESS]
+# An analysis of Kanye West's lyrics
  
-This is a project I originally undertook as coursework in 2016 while at the University of Pennsylvania, and then adapted and improved in 2020 as a side project. 
+This is a project I originally undertook as coursework in 2016 while at the University of Pennsylvania, and then re-visited and improved in 2020 as a side project. 
 
 The purpose of the project is to determine whether there are any significant patterns that can be extracted from Kanye West's song lyrics. More specifically, if we can use his lyrics as a proxy for his personality, whether we can detect any significant changes in his personality over the years. 
 
