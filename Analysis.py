@@ -49,27 +49,27 @@ dfLyrics = dfLyrics[~dfLyrics['Lyrics'].apply(lambda x: len(x) < 10)]
 # 2. CALCULATING FEATURES #
 ###################################
 
-# I've defined two lexicons: I-words (words referring to oneself); and grandeur words
+# I've defined two lexicons: I-words (words referring to oneself); and greatness words
 # Here I load each lexicon and then count the occurrence of its words in each song
 lexiconI = pd.read_table(os.path.join('Lexicons', 'i_words.txt'), index_col=0, sep='\t')
-lexiconGrand = pd.read_table(os.path.join('Lexicons', 'grandeur_words.txt'), index_col=0, sep='\t')
+lexiconGreat = pd.read_table(os.path.join('Lexicons', 'greatness_words.txt'), index_col=0, sep='\t')
 
 # Extract the list of regex patterns in each lexicon and compile them
 patternListI = [re.compile(pattern, re.IGNORECASE) for pattern in lexiconI['Regex']]
-patternListGrand = [re.compile(pattern, re.IGNORECASE) for pattern in lexiconGrand['Regex']]
+patternListGreat = [re.compile(pattern, re.IGNORECASE) for pattern in lexiconGreat['Regex']]
 
 # Count the number of pattern matches in each file for both lexicons and put them in a DataFrame
 lyricsSeries = dfLyrics["Lyrics"]
 matchCountI = count_patterns_series(patternListI, lyricsSeries)
-matchCountGrand = count_patterns_series(patternListGrand, lyricsSeries)
+matchCountGreat = count_patterns_series(patternListGreat, lyricsSeries)
 countIDF = df_pattern_matches(dfLyrics, matchCountI, lexiconI)
-countGrandDF = df_pattern_matches(dfLyrics, matchCountGrand, lexiconGrand)
+countGreatDF = df_pattern_matches(dfLyrics, matchCountGreat, lexiconGreat)
 
 # Finally, count total lexicon words per song and add new columns to the corpus
 totalIWords = countIDF.sum(axis=1)
-totalGrandWords = countGrandDF.sum(axis=1)
+totalGreatWords = countGreatDF.sum(axis=1)
 dfLyrics["I-words"] = totalIWords
-dfLyrics["Grandeur words"] = totalGrandWords
+dfLyrics["Greatness words"] = totalGreatWords
 
 # The next measure we will use is the vocabulary size, i.e. number of unique words per song
 # We'll count unique words per year to avoid duplicate counting of words
@@ -120,8 +120,8 @@ dfLyrics['Lexical density'] = lexicalDensity
 sentiment = dfLyrics.apply(lambda row: get_lyrics_sentiment(row["Lyrics"]), axis=1)
 dfLyrics["Sentiment"] = sentiment
 
-# Finally, we get average I-words/Grandeur words/Vocabulary size per year
-dfLyricsYear = dfLyrics[["Year", "I-words", "Grandeur words", "Lexical density", "Sentiment"]]\
+# Finally, we get average I-words/Greatness words/Vocabulary size per year
+dfLyricsYear = dfLyrics[["Year", "I-words", "Greatness words", "Lexical density", "Sentiment"]]\
     .groupby(["Year"]).mean()
 dfLyricsYear.reset_index(inplace=True)
 
@@ -152,7 +152,7 @@ dfLyricsYear.interpolate(method='linear', inplace=True)
 # 3. PLOTTING #
 ###################################
 
-# First we plot I-words and Grandeur words
+# First we plot I-words and Greatness words
 fig, ax1 = plt.subplots()
 
 color = 'tab:red'
@@ -164,8 +164,8 @@ ax1.tick_params(axis='y', labelcolor=color)
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
-ax2.set_ylabel('Average Grandeur words', color=color)
-ax2.plot(dfLyricsYear["Year"], dfLyricsYear["Grandeur words"], color=color)
+ax2.set_ylabel('Average Greatness words', color=color)
+ax2.plot(dfLyricsYear["Year"], dfLyricsYear["Greatness words"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
@@ -173,7 +173,7 @@ fig.set_size_inches(12, 8)
 plt.show()
 
 # Let's also check the correlation between the two
-print(dfLyricsYear[["I-words", "Grandeur words"]].corr())
+print(dfLyricsYear[["I-words", "Greatness words"]].corr())
 
 # Then plot vocab. size and lexical density
 fig, ax1 = plt.subplots()
@@ -206,7 +206,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
 dfLyricsRolling = dfLyricsYear.rolling(3).mean()
 
 # Now we plot the data
-# First we plot I-words and Grandeur words
+# First we plot I-words and Greatness words
 fig, ax1 = plt.subplots()
 
 color = 'tab:red'
@@ -218,8 +218,8 @@ ax1.tick_params(axis='y', labelcolor=color)
 # Instantiate a second axes that shares the same x-axis
 ax2 = ax1.twinx()
 color = 'tab:blue'
-ax2.set_ylabel('Average Grandeur words', color=color)
-ax2.plot(dfLyricsRolling["Year"], dfLyricsRolling["Grandeur words"], color=color)
+ax2.set_ylabel('Average Greatness words', color=color)
+ax2.plot(dfLyricsRolling["Year"], dfLyricsRolling["Greatness words"], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
@@ -227,7 +227,7 @@ fig.set_size_inches(12, 8)
 plt.show()
 
 # Let's also check the correlation between the two
-print(dfLyricsRolling[["I-words", "Grandeur words"]].corr())
+print(dfLyricsRolling[["I-words", "Greatness words"]].corr())
 
 # Then plot vocab. size and lexical density
 fig, ax1 = plt.subplots()
